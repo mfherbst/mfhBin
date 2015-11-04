@@ -1,0 +1,155 @@
+#!/bin/bash
+
+# ------------------------------------------------------
+
+class_nohup() {
+	echo "nohup.out"
+}
+
+class_swp() {
+	echo ".*.swp"
+}
+
+class_win() {
+	echo "desktop.ini:Thumbs.db"
+}
+
+class_mac() {
+	echo "__MACOSX:.Trashes:.Spotlight*:._*:.DS_Store"
+}
+
+class_tilde() {
+	echo ".*~:*~"
+}
+
+class_comp() {
+	echo "a.out"
+}
+
+# ------------------------------------------------------
+
+fill_list_class_cache() {
+        [ "$COMMANDS" ] && return
+        COMMANDS=$(declare -f | sed -ne '/^class_.* ()/s/^class_\([[:graph:]]*\) ().*/\1/p' | tr '\n' ' ')
+}
+
+list_of_classes() {
+        fill_list_class_cache
+        echo -n "$COMMANDS"
+}
+
+usage() {
+	cat <<-EOF
+	$(basename $0) [ -h | --help | <Option> ] [ <dir> ]
+
+	Cleanup temporary files from <dir>. If <dir> is missing
+	it defaults to the current working directory.
+
+	Options:
+	--force, -f, -y, --yes
+	Do not ask before removing a file
+
+	--recursive, -r
+	Recursively act on all subdirectories as well
+
+	--dry-run, -n, --simulate, -s
+	Just print what would be done
+
+	--only <class1>:<class2>: ...
+	Only delete files from these classes
+
+	--exclude <class1>:<class2>: ...
+	Do not delete files from these classes
+
+	Per default the following classes are considered:
+	$CLASSES
+
+	Classes:
+	EOF
+        for class in $(list_of_classes); do
+		printf "  %-10s%s\n" $class $(class_$class)
+	done
+}
+
+# ----------------------------------------------------
+
+SIMULATE=n
+RECURSIVE=n
+FORCE=n
+CLASSES="$(list_of_classes | tr ' ' ':')" 		# default classes which are activated
+EXCLUDE=""
+DIR="$PWD"
+
+while [ "$1" ]; do
+	case "$1" in
+		-h|--help)
+			usage
+			exit 0
+			;;
+		--force|-f|-y|--yes)
+			FORCE=y
+			;;
+		--recursive|-r)
+			RECURSIVE=y
+			;;
+		--dry-run|-n|--simulate|-s)
+			SIMULATE=y
+			;;
+		--only)
+			shift
+			CLASSES="$1"
+			;;
+		--exclude)
+			shift
+			EXCLUDE=":$1:"
+			;;
+		*)
+			if [ ! -d "$1" ]; then
+				echo "Invalid argument or invalid directory: $1" >&2
+				exit 1
+			fi
+			DIR="$1"
+			;;
+	esac
+	shift
+done
+
+DELETE="-exec rm -ri {} \;"
+if [ "$FORCE" == "y" ]; then
+	DELETE="-exec rm -r {} \;"
+elif [ "$SIMULATE" == "y" ]; then
+	DELETE="-print"
+fi
+
+MAXDEPTH="-maxdepth 1"
+if [ "$RECURSIVE" == "y" ]; then
+	MAXDEPTH=
+fi
+
+FINDARGS=
+OIFS="$IFS"
+IFS=":
+"
+
+for class in $CLASSES; do
+	IFS="$OIFS"
+	# deal (somewhat improperly) with excludes -> what happens if . $ or so in class names
+	echo "$EXCLUDE" | grep -q ":$class:" && continue
+
+	EXTRA="$(class_$class | awk '
+		BEGIN { FS=":" }
+
+		{ 
+			for(i=1; i <= NF; ++i) {	
+				if (i > 1) printf "-o "
+				printf "-name \"" $i "\" "
+			}
+		}
+	')"
+	[ "$FINDARGS" ] && FINDARGS="$FINDARGS -o "
+	FINDARGS="$FINDARGS$EXTRA"
+done
+IFS="$OIFS"
+
+eval "find \"$DIR\" $MAXDEPTH \( $FINDARGS \) $DELETE"
+exit 0
