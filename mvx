@@ -1,0 +1,15 @@
+#!/bin/sh
+
+if [ ! -f "$1" ] || [ ! -f "$2" ];then
+	echo "$(basename $0) <File1> <File2>"
+	echo ""
+	echo "Swaps the contents of the two files"
+	echo "Need two arguments, which are both files"
+	exit 1
+fi
+
+set -e
+
+mv "$1" "$1.bak"
+mv "$2" "$1"
+mv "$1.bak" "$2"
