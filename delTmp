@@ -46,7 +46,7 @@ usage() {
 	it defaults to the current working directory.
 
 	Options:
-	--force, -f, -y, --yes
+	--force, -f, -y, --yes, --quiet, -q
 	Do not ask before removing a file
 
 	--recursive, -r
@@ -78,7 +78,7 @@ RECURSIVE=n
 FORCE=n
 CLASSES="$(list_of_classes | tr ' ' ':')" 		# default classes which are activated
 EXCLUDE=""
-DIR="$PWD"
+DIR="."
 
 while [ "$1" ]; do
 	case "$1" in
@@ -86,7 +86,7 @@ while [ "$1" ]; do
 			usage
 			exit 0
 			;;
-		--force|-f|-y|--yes)
+		--force|-f|-y|--yes|--quiet|-q)
 			FORCE=y
 			;;
 		--recursive|-r)
