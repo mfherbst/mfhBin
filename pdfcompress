@@ -1,0 +1,18 @@
+#!/bin/bash
+
+pdfcompress() {
+        [ ! -f "$1" ] && return 1
+        if TMP=`mktemp -u`; then
+	       	pdf2ps "$1" $TMP.ps && \
+		ps2pdf $TMP.ps "$(basename "$1" .pdf)_small.pdf"
+	fi
+        rm -f $TMP.ps
+}
+
+return 0 &> /dev/null
+
+if [ ! -f "$1" ]; then
+	echo "Not a valid file: $1" >&2
+	exit 1
+fi
+pdfcompress "$1"
