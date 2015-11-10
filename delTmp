@@ -52,8 +52,8 @@ usage() {
 	--recursive, -r
 	Recursively act on all subdirectories as well
 
-	--dry-run, -n, --simulate, -s
-	Just print what would be done
+	--dry-run, -n, --simulate, -s, --list, -l
+	Just print what would be deleted
 
 	--only <class1>:<class2>: ...
 	Only delete files from these classes
@@ -92,7 +92,7 @@ while [ "$1" ]; do
 		--recursive|-r)
 			RECURSIVE=y
 			;;
-		--dry-run|-n|--simulate|-s)
+		--dry-run|-n|--simulate|-s|--list|-l)
 			SIMULATE=y
 			;;
 		--only)
