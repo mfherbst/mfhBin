@@ -1,0 +1,750 @@
+#!/usr/bin/env python3
+# vi: set et ts=4 sw=4 sts=4:
+
+import textwrap
+import yaml
+import re
+import os.path
+import itertools
+import sys
+import os
+import getopt
+import subprocess
+import shutil
+
+default_config_path = os.path.expanduser("~/.mfhBin/") + os.path.splitext(os.path.basename(__file__))[0] + ".yaml"
+
+# -------------------------------------------------------------------------
+
+class config:
+    """
+    Class representing a config file and allowing easy access
+    to the relevant values.
+    """
+
+    # internal dict where default value and comment
+    # for default section are kept in one place
+    __defaults_section_dict = {
+        "local_basedir": 
+            [ "~/SSHFS", "base directory for the ssh mounts" ],
+        "ssh_config":
+            [ "~/.ssh/config", "location of the .ssh/config file" ],
+        "use_ssh_config":
+            [ True, "Should the ssh config be used by default to determine extra mounts?" ],
+        "follow_symlinks":
+            [ True, "Should the sshfs mount follow symlinks" ],
+        "reconnect":
+            [ True, "Should a remount occur on connection loss" ],
+        "idmap_user":
+            [ True, "Should the id of the local and remote user be mapped" ],
+        "server_alive_interval":
+            [ 15, "Interval in seconds until connection is considered to be lost" ],
+        "sshfs_opts":
+            [ [], "All other sshfs options as plain arguments. Note that each argument and each value should "
+                    + "be a different list elemnt as the whole list is passed to subprocess.call as it is." ]
+    }
+
+    # example mount with comments and example value.
+    __examplename = "test"
+
+    # properties of fields in a mount section with value for example mount and comment
+    __mount_section_dict = {
+        # name         requrired        example     comment
+        "description": [ False,   "A test mount"  , "The description of the mount point, default: empty string" ],
+        "user_host" :  [ True,    "localhost"     , "user and host to use (i.e. the part after \"ssh\" wher you log in" ],
+        "port":        [ False,     22            , "The port to user, default: exactly what would get used by ssh. " +
+                        "Note that sshfs and hence this script implicitly use the /etc/ssh/ssh_config, ~/.ssh/config and other config files" ],
+        "remote_dir":  [ False,     "/"           , "The remote directory to mount, default: ~, i.e. the remote user's home directory" ],
+        "local_dir":   [ False,   "~/SSHFS/testdir", "Local directory where stuff is mounted to, default: $local_basedir/$name, i.e."+
+                        " in this case ~/SSHFS/" + __examplename + "The script will try to creaty this directory if it does not exist."]
+    }
+
+    def __parse_defaults_section(self, defaults_dict):
+        """
+        Parse the defaults dictionary of the config file read
+        """
+        for key in self.defaults:
+            try:
+                if defaults_dict[key] is None:
+                    pass
+                elif type(defaults_dict[key]) == type(self.defaults[key]):
+                    self.defaults[key] = defaults_dict[key]
+                else:
+                    string = "Config file has wrong type for option \"" + key
+                    string += "\" in defaults section. Expected type \"" + str(type(self.defaults[key]))
+                    string += "\" but got type \"" + str(type(defaults_dict[key])) + "\"."
+                    raise ValueError(string)
+            except KeyError:
+                pass
+
+    def apply_defaults(self,name,mount_dict):
+        """
+        Check whether the mount_dict is a valid dict describing a mount
+        If yes apply the defaults, such that the dict can actually be used.
+        Else raise a ValueError.
+
+        Also does some normalisation like expanding the user directory
+
+        name:       name of the mount
+        mount_dict: associated mount options
+        """
+        self.__check_mount(mount_dict)
+
+        # all keys in mount:
+        keys = set(mount_dict.keys())
+
+        # all keys in defaults, which are not in mount:
+        keys = set(self.defaults.keys()).difference(keys)
+
+        # update elements:
+        mount_dict.update([ (k,self.defaults[k]) for k in keys ])
+
+        locdir = mount_dict.get("local_dir")
+        if locdir is None or locdir == "":
+            mount_dict["local_dir"] = os.path.expanduser(self.defaults["local_basedir"] + "/" + name)
+        else:
+            mount_dict["local_dir"] = os.path.expanduser(mount_dict["local_dir"])
+
+    def __check_mount(self,mount_dict):
+        """
+        Check that a single mount definition is proper
+        """
+        def raise_error(option,got,expected):
+            string = "Wrong type for option \"" + option + "." 
+            string += "Expected type \"" + str(type(expected))
+            string += " but got type \"" + str(type(got)) + "\"."
+            raise ValueError(string)
+
+        # check that all keys have the correct type
+        for key in mount_dict:
+            if mount_dict[key] is None:
+                continue
+
+            try:
+                if type(mount_dict[key]) != type(config.__mount_section_dict[key][1]):
+                    raise_error(mount_name,key,mount_dict[key],config.__mount_section_dict[key][1])
+            except KeyError:
+                pass
+
+            try:
+                if type(mount_dict[key]) != type(self.defaults[key]):
+                    raise_error(mount_name,key,mount_dict[key],self.defaults[key])
+            except KeyError:
+                pass
+
+        # check that all required keys are there
+        try:
+            for req in self.__required_fields_for_mount:
+                if type(mount_dict[req]) != type(config.__mount_section_dict[req][1]):
+                    raise_error(mount_name,req,mount_dict[key],config.__mount_section_dict[key][1])
+        except KeyError as e:
+            raise ValueError("Requried option \"" + str(e) + "\" not found.")
+
+    def __parse_mounts_section(self, mounts_dict):
+        """
+        Check that the mounts section dictionary is proper,
+        i.e. that all the relevant data is there and has the correct type
+
+        Then add the missing option in the dictionaries from the default.
+        """
+        for (name,mount) in mounts_dict.items():
+            try:
+                self.apply_defaults(name,mount)
+            except ValueError as e:
+                raise ValueError("In mount section \"" + name + "\": " + str(e))
+        self.__mounts = mounts_dict
+
+    def __init__(self,file):
+        """
+        Initialises the structure
+        file should be a file object or a string (representing the content of the contig file
+        """
+
+        # fill defaults dict
+        self.__defaults = {  key : value[0] for key, value in config.__defaults_section_dict.items() }
+        self.__required_fields_for_mount = [ key for key, value in config.__mount_section_dict.items() if value[0] ]
+
+        # parse the config
+        parsed = yaml.load(file)
+
+        try:
+            self.__parse_defaults_section(parsed["defaults"])
+        except KeyError:
+            pass
+
+        try:
+            self.__parse_mounts_section(parsed["mounts"])
+        except KeyError:
+            self.__parse_mounts_section(dict())
+            pass
+
+    @property
+    def defaults(self):
+        """Return the dictionary giving the default options and their values"""
+        return self.__defaults
+
+    @property
+    def mounts(self):
+        """Return the dictionary containing the mounts by their name and mapping this name
+        to a dictionary of their options. The default options are already copied to the
+        inner dictionaries.
+        """
+        return self.__mounts
+
+    def default_config():
+        """Returns default config as a string"""
+
+        # the usual indention to use:
+        ind = "      "
+
+        string = "---\n"
+        string += "defaults:\n"
+        
+        for key, value in config.__defaults_section_dict.items():
+            # add the comment:
+            string += textwrap.fill(value[1], initial_indent=(ind + "# "),
+                                    subsequent_indent=(ind + "# "))
+            string += "\n"
+
+            string += ind + key + ": " + str(value[0]) + "\n"
+            string += ind + "\n"
+
+        string += "\n"
+        string += "mounts:\n"
+        string += ind + "# have a testmount by the name \"test\"\n"
+        string += ind + config.__examplename + ":\n"
+
+        # update indention
+        ind = ind+ind
+
+        for key, value in config.__mount_section_dict.items():
+            # add the comment:
+            string += textwrap.fill(value[2], initial_indent=(ind + "# "),
+                                    subsequent_indent=(ind + "# "))
+            string += "\n"
+
+            if value[0]:
+                string += ind + "# This option is required.\n"
+            string += ind + key + ": " + str(value[1]) + "\n"
+            string += ind + "\n"
+
+        string += ind + "# Any other option from the defaults section is also allowed.\n"
+        string += ind + "# and plainly overwrites the default.\n"
+        string += "\n..."
+
+        return string
+
+# -------------------------------------------------------------------------
+
+class ssh_config:
+    def __init__(self,ssh_config_file):
+        # match for this in the config file:
+        m_Host = re.compile("^\s*Host\s")
+        m_Wildcards = re.compile(".*[*?]")
+
+        # extract list of hosts behind each Host keyword
+        hosts = [ line.replace("Host","").strip().split() for line in ssh_config_file if m_Host.match(line) is not None ]
+
+        # bin those hosts, which contain wildcard characters and make it a set
+        hosts = { host for host in  itertools.chain.from_iterable(hosts) if m_Wildcards.match(host) is None  }
+        self.__hosts = hosts
+
+    @property
+    def hosts(self):
+        """
+        Return all hosts defined
+        """
+        return self.__hosts
+        
+# -------------------------------------------------------------------------
+
+def warning(*objs):
+        print("WARNING: ", *objs, file=sys.stderr)
+
+def apply_defaults_to_hosts(hosts,cfg):
+    """
+    Takes an iterable of hosts from the ssh config and 
+    applies the default options from the config object to them
+    return the resulting map.
+    """
+    if not isinstance(cfg,config):
+        raise TypeError("cfg has to be a config class")
+
+    matches = dict ()
+    for host in hosts:
+        m = { "user_host": host }
+        cfg.apply_defaults(host,m)
+        matches[host] = m
+    return matches
+
+def collect_all_mounts(cfg,use_ssh_config=None):
+    """
+    Collects all possilbe mounts from all possilbe sources
+
+    cfg: The config object
+
+    use_ssh_config:
+    if True the ssh ssh_config file given in cfg are considered
+    for further mounts. 
+    if False this file is not considered.
+    if None, the use_ssh_config parameter from the defaults section
+    of the cfg object determines what is done
+    """
+
+    if not isinstance(cfg,config):
+        raise TypeError("cfg has to be a config class")
+
+    if use_ssh_config is None:
+        use_ssh_config = cfg.defaults["use_ssh_config"]
+
+    if not use_ssh_config:
+        return cfg.mounts
+
+    ssh = None
+    try:
+        with open(os.path.expanduser(cfg.defaults["ssh_config"])) as f:
+            ssh = ssh_config(f)
+    except IOError as e:
+        warning("Could not read from ssh config file " + cfg.defaults["ssh_config"])
+        return cfg.mounts
+
+    if ssh is not None:
+        enriched_hosts = apply_defaults_to_hosts(ssh.hosts,cfg)
+
+        # add default mounts to it:
+        enriched_hosts.update(cfg.mounts)
+        return enriched_hosts
+    else:
+        return cfg.mounts
+        
+# -------------------------------------------------------------------------
+
+def is_mount_mounted(name,mount_dict):
+    """
+    Determine whether a mount is currently mounted or not
+    name:      the name of the mount (the dict key used to refer to the options)
+    options:   the options for the mount
+    """
+    # TODO there is probably a better way via D-Bus or related how we can interact
+    #      with the mounts, but I can't be bothered to look that up now.
+
+    # the file to check for the mounts
+    mountsfile= "/proc/mounts"
+    
+    # build the pattern string to match the lines of mountsfile for
+    patstring = "^"
+
+    # user_host and remote dir
+    if mount_dict.get("remote_dir") is not None:
+        patstring += mount_dict["user_host"] + ":" + mount_dict["remote_dir"] + "/?"
+    else:
+        patstring += mount_dict["user_host"] + ":"
+
+    patstring += " +" + mount_dict["local_dir"] + " +fuse\.sshfs"
+
+    # compile it into a regex:
+    pattern = re.compile(patstring)
+
+    try:
+        with open(mountsfile,"r") as f:
+            # extract lines matching the pattern:
+            lines = [ line for line in f if pattern.match(line) is not None ]
+
+            if len(lines) == 0:
+                # not mounted
+                return False
+            elif len(lines) == 1:
+                # mounted
+                return True
+            else:
+                # this is an error scince the pattern was not tight enough
+                # should not happen
+                warning("More than one line of \"" + mountsfile + "\" matched. \n"
+                        + "This is an internal error. Please contact the developer and attach the following output:\n"
+                        ,str(lines))
+                warning("Treating mount \""+name+"\" as mounted")
+                return True
+
+    except IOError as e:
+        raise SystemExit("Could not open mounts file \"" + mountsfile + "\": " + str(e))
+    return None
+
+def shrink_string_to(string,length):
+    """
+    Modify a string such that it has a maximum length length
+    """
+    if string is None:
+        return ""
+
+    slen = len(string)
+    if slen <= length:
+        return string
+    elif length < 3:
+        return length*"*"
+    else:
+        slen = length//2
+        return string[:slen-2] + "..." + string[-slen+1:]
+
+def print_mounts(mounts):
+    """
+    Print the mounts and some basic properties
+    mounts: dictionary of the mounts, key is the name of the mount, 
+            value are the mount options
+    """
+    # all keys to print
+    keys=["mounted", "name","user_host","remote_dir","description"]
+
+    # get console dimension:
+    (width, height) = shutil.get_terminal_size((80, 20))
+
+    # set sizes depending on dimension:
+    if width <= 80:
+        # the sizes of the columns:
+        sizes = {"mounted" : 1,
+                 "name" : width//2-4,
+                 "user_host": 0,
+                 "remote_dir": 0,
+                 "description": width - 1 - width//2}
+    elif width < 100:
+        sizes = {"mounted" : 1,
+                 "name" : 38,
+                 "user_host": 0,
+                 "remote_dir": 0,
+                 "description": width - 42}
+    elif width < 140:
+        sizes = {"mounted" : 1,
+                 "name" : 38,
+                 "user_host": 0,
+                 "remote_dir": 30,
+                 "description": width - 73}
+    else:
+        sizes = {"mounted" : 1,
+                 "name" : 38,
+                 "user_host": 28,
+                 "remote_dir": 42,
+                 "description": width - 113}
+
+    # the format string:
+    formstr =  "{mounted:<"+str(sizes["mounted"])+"} "
+    formstr += "{name:<"+str(sizes["name"])+"} "
+    formstr += "{user_host:<"+str(sizes["user_host"])+"} "
+    formstr += "{remote_dir:<"+str(sizes["remote_dir"])+"} "
+    formstr += "{description:<"+str(sizes["description"])+"}"
+
+    # Print the header of the table:
+    print(formstr.format(mounted="M",
+                         name=shrink_string_to("Name of mount",sizes["name"]),
+                         user_host=shrink_string_to("UserHost",sizes["user_host"]),
+                         remote_dir=shrink_string_to("Remote dir",sizes["remote_dir"]),
+                         description=shrink_string_to("Description",sizes["description"])))
+
+    # Print the separator:
+    fields=dict()
+    for key in keys:
+        fields[key] = sizes[key]*"-"
+    print(formstr.format(**fields))
+
+    # print the fields:
+    for name in mounts:
+        print_dict = dict(mounts[name])
+        print_dict["name"] = name
+        print_dict["mounted"] = " "
+
+        if is_mount_mounted(name,mounts[name]):
+            print_dict["mounted"] = "*"
+
+        for key in keys:
+            fields[key]=shrink_string_to(print_dict.get(key),sizes[key])
+
+        print(formstr.format(**fields))
+
+def do_mount(name,mount_dict):
+    """
+    Perform the mounting operation on a mount
+    name:      the name of the mount (the dict key used to refer to the options)
+    mount_dict:   the options for the mount
+
+    returns with non-zero if there was a problem
+    """
+    print("Mounting \"" + name + "\" on \"" + mount_dict["local_dir"] + "\".")
+    
+    try:
+        # make the local directory
+        os.makedirs(mount_dict["local_dir"], exist_ok=True)
+    except OSError as e:
+        print("Could not make directory \"" + mount_dict["local_dir"] + "\": " + str(e), file=sys.stderr)
+        return 1
+
+    cmdlist=[ "sshfs" ]
+
+    # user_host and remote dir
+    if mount_dict.get("remote_dir") is not None:
+        cmdlist.append(mount_dict["user_host"] + ":" + mount_dict["remote_dir"] + "/")
+    else:
+        cmdlist.append(mount_dict["user_host"] + ":")
+
+    # local dir:
+    cmdlist.append(mount_dict["local_dir"])
+
+    #
+    # sshfs options:
+    #
+    if mount_dict.get("port") is not None:
+        cmdlist.extend(["-p",str(mount_dict["port"])])
+
+    if mount_dict["follow_symlinks"]:
+        cmdlist.extend(["-o", "follow_symlinks"])
+
+    if mount_dict["reconnect"]:
+        cmdlist.extend(["-o", "reconnect"])
+
+    if mount_dict["idmap_user"]:
+        cmdlist.extend(  ["-o", "idmap=user", "-o", "uid=" + str(os.getuid()), 
+                          "-o", "gid=" + str(os.getgid())  ])
+
+    cmdlist.extend( [ "-o", "ServerAliveInterval=" + str(mount_dict["server_alive_interval"]) ] )
+
+    # remaining options:
+    cmdlist.extend( mount_dict["sshfs_opts"] )
+
+    # do the call
+    ret = subprocess.call(cmdlist)
+    if (ret != 0):
+        print("Error executing sshfs",file=sys.stderr)
+    return ret
+
+def do_unmount(name,mount_dict):
+    """
+    Perform the unmounting operation on a mount
+    name:      the name of the mount (the dict key used to refer to the options)
+    mount_dict:   the options for the mount
+
+    returns non-zero if there was a problem
+    """
+    print("UNMOUNTING \"" + name + "\" from \"" + mount_dict["local_dir"] + "\".")
+
+    cmdlist = [ "fusermount", "-u", mount_dict["local_dir"] ]
+    ret = subprocess.call(cmdlist)
+
+    if (ret != 0):
+        print("Error executing fusermount to unmount location \""+ mount_dict["local_dir"]  +"\"",file=sys.stderr)
+        return ret
+
+    try:
+        os.rmdir(mount_dict["local_dir"])
+    except OSError:
+        warning("Could not remove mount directory: \"" + mount_dict["local_dir"] + "\"")
+        return 1
+    return 0
+
+def toggle_mount(name,mount_dict,force_mount=False,force_unmount=False):
+    """
+    Mount or unmount the mount depending on the force settings
+    and whether the mount is mounted or not
+    name:      the name of the mount (the dict key used to refer to the options)
+    mount_dict:   the options for the mount
+
+    return the exit code of the mount / unmount call
+    """
+    if force_mount and force_unmount:
+        raise ValueError("Cannot have both force_mount and force_unmount set")
+
+    # first deal with force cases:
+    if force_mount:
+        return do_mount(name,mount_dict)
+    elif force_unmount:
+        return do_unmount(name,mount_dict)
+
+    # now deal with cases that depend on the mount status:
+    elif is_mount_mounted(name,mount_dict):
+        return do_unmount(name,mount_dict)
+    else:
+        return do_mount(name,mount_dict)
+
+# -------------------------------------------------------------------------
+
+def usage():
+    """Return a usage string"""
+
+    string = os.path.basename(__file__) + ''' [ --help | -h | <Options> ] <regex>
+
+Mount or unmount a location using sshfs, where the relevant settings are read
+from a yaml config file (see --config below) or from the ssh config (see
+--sshcfg or --no-sshcfg below)
+
+The script tries to determine wheather the mount is currently mounted and than
+toggles the corresponding state. If this does not work -u / -m can be used
+to enforce a certain behaviour.
+
+The regex <regex> is used to filter the possible mounts by their name (which
+is given in the config file). If only a single mount applies than mounting 
+/ unmounting takes place, depending on whether the location is mounted or not.
+
+If all matching locations should be mounted/unmounted at once supply the --all or
+-a flag. Note that this requires either -m / --mount or -u / --unmount to be 
+specified as well.
+
+Options:
+    -u  --unmount
+    Force unmount of the match or all matches to <regex> (if -a / --all is given)
+
+    -m  --mount
+    Force mount of the match or all matches to <regex> (if -a / --all is given)
+
+    -a  --all
+    Apply action to all matches of <regex>, requires -m / --mount or -u / --unmount
+
+    -l  --list
+    Just list the matching mounts, takes priority over --all, --mount or --unmount.
+    If the first column has a "*", the mount is currently mounted.
+
+    -c <script config>
+    --config <script config>
+    Provide a different script config for mountSSHFS. The default is located at
+        ''' + default_config_path + '''
+
+    --use-sshcfg
+    Force parsing of the ssh config (by default ~/.ssh/config) even if the script config
+    file has a different default.
+    
+    --no-use-sshcfg
+    The opposite: Disable parsing of the ssh config.  '''
+    return string
+
+def parse_args():
+    """
+    Parse the arguments and return a dictionary
+    of the parsed values
+    If unsuccessful, die with a SystemExit
+    If usage has been requested, exit with code 0
+    """
+    confdict = {
+        "force_unmount": False,     # force unmount the match
+        "force_mount": False,       # force mount the match
+        "list_only": False,         # only list the matching guys
+        "all": False,               # apply action to all matching guys
+        "regex": None,              # the regex to match
+        "config_path": default_config_path,
+        "use_ssh_config": None,     # overwrite parameter in default section of cfg file
+    }
+
+    try:                                
+        opts, args = getopt.getopt(sys.argv[1:], "ahlumc:", ["mount","unmount","list","help", "config=","all","use-sshcfg","no-use-sshcfg"])
+    except getopt.GetoptError:          
+        raise SystemExit(usage())                         
+
+    for opt, arg in opts:
+        if opt in ("-h","--help"):
+            print(usage())
+            sys.exit(0)
+        elif opt in ("-u","--unmount"):
+            confdict["force_unmount"] = True
+        elif opt in ("-m","--mount"):
+            confdict["force_mount"] = True
+        elif opt in ("-c","--config"):
+            confdict["config_path"] = arg
+        elif opt in ("-l","--list"):
+            confdict["list_only"] = True
+        elif opt in ("--all"):
+            confdict["all"] = True
+        elif opt in ("--use-sshcfg"):
+            confdict["use_ssh_config"] = True
+        elif opt in ("--no-use-sshcfg"):
+            confdict["use_ssh_config"] = False
+
+    # check some logic:
+    if confdict["all"] and not (confdict["force_mount"] or confdict["force_unmount"]):
+        raise SystemExit("-a / --all can only be used together with a forced mount (-m / --mount) or unmount (-u / --unmount)")
+
+    if (confdict["force_mount"] and confdict["force_unmount"]):
+        raise SystemExit("-m / --mount and -u / --unmount are mutually exclusive. You cannot provide both.") 
+
+    # list_only may be used without a regex
+    if confdict["list_only"] and len(args) == 0:
+        args = [ ".*" ]
+
+    # check if we have a valid regex
+    if len(args) != 1:
+        raise SystemExit("Need exactly one regex, which has to be the last argument.")
+
+    if (confdict["regex"] == ""):
+        raise SystemExit("The regex cannot be empty.")
+
+    try:
+        confdict["regex"] = re.compile(".*"+args[0])
+    except re.error as r:
+        raise SystemExit("Regular expression pattern passed is not valid: " + str(r))
+
+    # adjust some values according to priority:
+    if (confdict["list_only"]):
+        confdict["all"] = False
+        confdict["force_mount"] =  False
+        confdict["force_unmount"] =  False
+   
+    return confdict
+
+def get_config(config_path):
+    """Return a config object if reading the config
+    file was successful, else die with a SystemExit"""
+
+    if (not os.path.isfile(config_path)):
+        # we need to drop a default
+        if config_path == default_config_path:
+            print("Dropping default config at: " + default_config_path)
+            with open(default_config_path,"w") as f:
+                f.writelines(config.default_config())
+            print("Please edit to suit your needs.")
+            sys.exit(0)
+        else:
+            raise SystemExit("Could not find config: " + config_path)
+
+    # read config:
+    cfg = None
+    try:
+        with open(config_path,"r") as f:
+            cfg = config(f)
+    except IOError as e:
+        raise SystemExit("Could not read config file " + config_path + ":  " + str(e))
+
+    if cfg is None:
+        raise SystemExit("Error reading config")
+
+    return cfg
+
+# -------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    argdict = parse_args()
+    cfg = get_config(argdict["config_path"])
+
+    # determine all mounts:
+    mounts = collect_all_mounts(cfg,use_ssh_config=argdict["use_ssh_config"])
+
+    # filter with regex:
+    mounts = { key: mount for key, mount in mounts.items() if argdict["regex"].match(key) }
+
+    if argdict["list_only"]:
+        print_mounts(mounts)
+        sys.exit(0)
+
+    if argdict["all"]:
+        totalreturn = 0  # the final return code
+        for name in mounts:
+            ret = toggle_mount(name,mounts[name],
+                         force_mount=argdict["force_mount"],
+                         force_unmount=argdict["force_unmount"])
+            if ret != 0:
+                totalreturn = 1
+        sys.exit(totalreturn)
+
+    if len(mounts) > 1:
+        print("More than one mount matched the RegEx.\nPerhaps a $ at the end fixes your problem?\n")
+        print_mounts(mounts)
+        sys.exit(1)
+    elif len(mounts) == 0:
+        print("No mount matched the RegEx.")
+        sys.exit(1)
+    else:
+        name, mount_dict = mounts.popitem()
+        ret = toggle_mount(name,mount_dict)
+        sys.exit(ret)

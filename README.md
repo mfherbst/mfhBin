@@ -13,6 +13,11 @@ Produces a random integer between 0 and the first argument
 ### delTmp
 Delete temporary files. Commandline arguments allow to specify precisely what types of files are deleted (Windows, Mac, Programming, swp, ...)
 
+### mountSSHFS
+Convenience script around ``sshfhs`` and ``fusermount``. Mounts and unmounts a set of predefined remote locations with predefined parameters.
+Also parses the user's ssh config file (usually ~/.ssh/config) and makes the Hosts configured there available for mounting with the predefined
+parameters for ``sshfs``. Of cause the behaviour and the parameters can be configured.
+
 ### mvx
 Swap the content of two files. 
 
