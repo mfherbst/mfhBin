@@ -597,6 +597,7 @@ Options:
     -l  --list
     Just list the matching mounts, takes priority over --all, --mount or --unmount.
     If the first column has a "*", the mount is currently mounted.
+    This is the default if no option is supplied.
 
     -c <script config>
     --config <script config>
@@ -627,6 +628,10 @@ def parse_args():
         "config_path": default_config_path,
         "use_ssh_config": None,     # overwrite parameter in default section of cfg file
     }
+
+    if len(sys.argv) == 1:
+        # insert the default option:
+        sys.argv.append("-l")
 
     try:                                
         opts, args = getopt.getopt(sys.argv[1:], "ahlumc:", ["mount","unmount","list","help", "config=","all","use-sshcfg","no-use-sshcfg"])
