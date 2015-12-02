@@ -369,6 +369,26 @@ def is_mount_mounted(name,mount_dict):
         raise SystemExit("Could not open mounts file \"" + mountsfile + "\": " + str(e))
     return None
 
+def send_to_xclip(string):
+    """Send a string to the clipboard xclip
+    return True if successful, else False
+    """
+
+    try:
+        xclip = subprocess.Popen(["xclip","-in"], stdin=subprocess.PIPE)
+    except:
+        return False
+
+    string = string.replace("'","")
+    xclip.communicate(input=string.encode())
+    xclip.wait()
+
+    if (xclip.returncode != 0):
+        return False
+
+    return True
+
+
 def shrink_string_to(string,length):
     """
     Modify a string such that it has a maximum length length
@@ -466,7 +486,6 @@ def do_mount(name,mount_dict):
 
     returns with non-zero if there was a problem
     """
-    print("Mounting \"" + name + "\" on \"" + mount_dict["local_dir"] + "\".")
     
     try:
         # make the local directory
@@ -474,6 +493,8 @@ def do_mount(name,mount_dict):
     except OSError as e:
         print("Could not make directory \"" + mount_dict["local_dir"] + "\": " + str(e), file=sys.stderr)
         return 1
+
+    print("Mounting \"" + name + "\" on \"" + mount_dict["local_dir"] + "\"")
 
     cmdlist=[ "sshfs" ]
 
@@ -510,7 +531,10 @@ def do_mount(name,mount_dict):
     # do the call
     ret = subprocess.call(cmdlist)
     if (ret != 0):
-        print("Error executing sshfs",file=sys.stderr)
+        print("   Error executing sshfs",file=sys.stderr)
+    else:
+        if send_to_xclip(mount_dict["local_dir"]):
+            print("         and sending directory string to X clipboard.")
     return ret
 
 def do_unmount(name,mount_dict):
