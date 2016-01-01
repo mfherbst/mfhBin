@@ -24,6 +24,9 @@ Compress the file size of a ``pdf`` file. Works by the trick of converting ``pdf
 ### random_int.sh
 Produces a random integer between 0 and the first argument
 
+### random_mac.sh
+Produces a random mac address
+
 ### down_chaos_videos.py
 Download videos or other media from CCC events (like the Chaos communication congress, MRMCD, Camp, ...)
 By default the most recent chaos event is considered and high-quality ``webm`` files are downloaded.
