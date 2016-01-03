@@ -38,12 +38,6 @@ class config:
                 "fahrplan": "https://events.ccc.de/congress/2015/Fahrplan",
                 "media_prefix": "https://cdn.media.ccc.de/congress/2015",
             },
-            "32c3-alt": {
-                "starts": "2015-12-26",
-                "name": "32c3-alt",
-                "fahrplan": "https://fahrplan.top/congress/2015/Fahrplan",
-                "media_prefix": "https://cdn.media.ccc.de/congress/2015",
-            },
             "mrmcd2015": {
                 "starts": "2015-09-04",
                 "name": "mrmcd2015",
