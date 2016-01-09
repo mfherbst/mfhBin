@@ -48,7 +48,7 @@ class config:
                 "starts": "2015-08-13",
                 "name": "camp2015",
                 "fahrplan": "https://events.ccc.de/camp/2015/Fahrplan",
-                "media_prefix": "https://cdn.media.ccc.de/events/camp/2015",
+                "media_prefix": "https://cdn.media.ccc.de/events/camp2015",
             },
         },
     }
