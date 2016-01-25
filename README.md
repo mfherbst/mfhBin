@@ -48,3 +48,8 @@ downloads the talks ``6258`` and ``6450``.
 
 The script can be configured for downloading other talks or media formats via a configuration file. 
 If you want to personalise it, you should probably start by dumping the default configuration somewhere (use ``--config`` and ``--dump`` for this)
+
+### open_shell_at.sh
+Open a terminal at a specified working directory. 
+Wrapper to substitute file managers like ``nautilus`` or ``thunar`` from graphical programs.
+Currently the author uses it for udiskie.

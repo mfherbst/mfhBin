@@ -1,3 +1,3 @@
-#!/bin/bash
+#!/bin/sh
 cd "$1"
-i3-sensible-terminal
+i3-sensible-terminal || xterm 
