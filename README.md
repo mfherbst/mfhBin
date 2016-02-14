@@ -54,3 +54,9 @@ Open a terminal at a specified working directory.
 Wrapper to substitute file managers like ``nautilus`` or ``thunar`` from graphical programs.
 Currently the author uses it for udiskie.
 Tries a couple of terminals to select a well-suited one, so does not assume a speciffic terminal emulator to be installed.
+
+### vimwhich
+Script to open the executable/script corresponding to a command in an editor (by default ``vim``). 
+I.e. it looks up the full path of the command using ``which`` and then opens the result. 
+The precise editor used is determined by the content of the ``EDITOR`` variable.
+By default ``vim`` is used.

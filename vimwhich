@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# the editor used:
+ED=${EDITOR:-vim}
+
+if RES="$(which $@)"; then
+	$ED "$RES"
+	exit $?
+fi
+exit 1
