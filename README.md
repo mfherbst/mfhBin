@@ -53,3 +53,4 @@ If you want to personalise it, you should probably start by dumping the default 
 Open a terminal at a specified working directory. 
 Wrapper to substitute file managers like ``nautilus`` or ``thunar`` from graphical programs.
 Currently the author uses it for udiskie.
+Tries a couple of terminals to select a well-suited one, so does not assume a speciffic terminal emulator to be installed.
