@@ -1,2 +1,2 @@
 #!/bin/sh
-in_blocking_terminal.sh vim $*
+in_blocking_terminal.sh ${EDITOR:-vim} $*
