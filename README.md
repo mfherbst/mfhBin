@@ -60,3 +60,15 @@ Script to open the executable/script corresponding to a command in an editor (by
 I.e. it looks up the full path of the command using ``which`` and then opens the result. 
 The precise editor used is determined by the content of the ``EDITOR`` variable.
 By default ``vim`` is used.
+
+### in_blocking_terminal.sh
+Script to hack away the non-blocking feature of some terminals. 
+Since a while ago ``gnome-terminal`` does not allow to start a terminal as a new process and keep blocking the current process until execution oth this ``gnome-terminal`` process is done.
+The ``--disable-factory`` which used to exist for this pupose is not valid any more.
+This script tries to re-implement the feature to some extent. 
+Similar to ``i3-sensible-terminal`` and ``open_shell_at.sh`` I try to guess a terminal on the current system and execute the remaining commandline within it. I then use ``pgrep`` to check for the full commandline and keep ``sleep``ing until it cannot be found in the table of running processes any more.
+**This is by no means save** and has tons of possible **race conditions**, but it works fine for cases where a file should be edited in a new terminal or similar. The author uses it with the ``termvim`` script below in order to allow ``vim`` in ``gnome-terminal`` to be used as an external editor from ``icedove``/``thunderbird``.
+If anyone knows a better mechanism to achive this functionality apart from use a different terminal (I really like ``gnome-terminal``, actually) I would be happy to know.
+
+### termvim
+Open the arguments in ``vim`` in a new, blocking terminal.

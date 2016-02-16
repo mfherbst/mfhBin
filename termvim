@@ -1,0 +1,2 @@
+#!/bin/sh
+in_blocking_terminal.sh vim $*
