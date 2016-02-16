@@ -10,7 +10,7 @@
 
 # checkinterval controls how often we poll
 # whether the process is still there
-CHECKINTERVAL="0.5" # seconds
+CHECKINTERVAL="1" # seconds
 
 get_count() {
 	# return the number of processes matching exactly this commandline
@@ -68,7 +68,7 @@ open_in_terminal "$@"
 RES="$?"
 
 # wait a while for things to settle
-sleep 0.5
+sleep 1
 
 # check if process still there
 if [ "$(get_count "$@")" -eq 0 ]; then
