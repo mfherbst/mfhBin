@@ -10,7 +10,7 @@ Helpful scripts for everyday work
 ### delTmp
 Find and delete temporary files. Commandline arguments allow to specify precisely what types of files are deleted (Windows, Mac, Programming, swp, ...)
 
-### mountSSHFS
+### mountsshfs
 Convenience script around ``sshfhs`` and ``fusermount``. Mounts and unmounts a set of predefined remote locations with predefined parameters.
 Also parses the user's ssh config file (usually ``~/.ssh/config``) and makes the Hosts configured there available for mounting with the predefined
 parameters for ``sshfs``. Of cause the behaviour and the parameters can be configured.
