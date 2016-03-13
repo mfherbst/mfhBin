@@ -7,8 +7,8 @@ Helpful scripts for everyday work
 * Source the file ``enable.bash_completion`` from the ``~/.bash_completion`` in order to enable tab completion for the scripts in this repository.
 
 ## Short description of contained scripts
-### delTmp
-Find and delete temporary files. Commandline arguments allow to specify precisely what types of files are deleted (Windows, Mac, Programming, swp, ...)
+### deltmp
+Find and delete temporary files. Commandline arguments allow to specify precisely what types of files are deleted (Windows, Mac, Programming, swp, ...) and wheather to ask before deleting anything or not.
 
 ### mountsshfs
 Convenience script around ``sshfhs`` and ``fusermount``. Mounts and unmounts a set of predefined remote locations with predefined parameters.

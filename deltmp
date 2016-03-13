@@ -47,13 +47,14 @@ usage() {
 
 	Options:
 	--force, -f, -y, --yes, --quiet, -q
-	Do not ask before removing a file
+	Remove files without asking
 
 	--recursive, -r
 	Recursively act on all subdirectories as well
 
 	--dry-run, -n, --simulate, -s, --list, -l
-	Just print what would be deleted
+	Just print what would be deleted and do not delete
+	anything
 
 	--only <class1>:<class2>: ...
 	Only delete files from these classes
@@ -69,6 +70,81 @@ usage() {
         for class in $(list_of_classes); do
 		printf "  %-10s%s\n" $class $(class_$class)
 	done
+}
+
+build_findargs() {
+	# $1: Classes to consider as a : separated list
+	# $2: Classes to exclude as a : separated list
+	#
+	# prints the findargs to stdout
+
+	local CLASSES="$1"
+	local EXCLUDE="$2"
+
+	local OIFS="$IFS"
+	IFS=":
+	"
+
+	for class in $CLASSES; do
+		IFS="$OIFS"
+		# deal (somewhat improperly) with excludes -> what happens if . $ or so in class names
+		echo "$EXCLUDE" | grep -q ":$class:" && continue
+
+		local EXTRA="$(class_$class | awk '
+		BEGIN { FS=":" }
+
+		{ 
+			for(i=1; i <= NF; ++i) {	
+				if (i > 1) printf "-o "
+				printf "-name \"" $i "\" "
+			}
+		}
+		')"
+		[ "$FINDARGS" ] && FINDARGS="$FINDARGS -o "
+		FINDARGS="$FINDARGS$EXTRA"
+	done
+	IFS="$OIFS"
+
+	echo "$FINDARGS"
+}
+
+delete_files() {
+	# delete all matching files without asking
+	#
+	# $1: directory to work within
+	# $2: maximum depth to go to
+	# $3: find args files should satisfy
+
+	local DIR="$1"
+	local MAXDEPTH="$2"
+	local FINDARGS="$3"
+	eval "find \"$DIR\" $MAXDEPTH \( $FINDARGS \) -exec rm -r {} \;"
+}
+
+delete_files_ask() {
+	# delete all matching files without asking
+	#
+	# $1: directory to work within
+	# $2: maximum depth to go to
+	# $3: find args files should satisfy
+
+	local DIR="$1"
+	local MAXDEPTH="$2"
+	local FINDARGS="$3"
+	eval "find \"$DIR\" $MAXDEPTH \( $FINDARGS \) -exec rm -ri {} \;"
+}
+
+print_files_to_delete() {
+	# delete all matching files without asking
+	#
+	# $1: directory to work within
+	# $2: maximum depth to go to
+	# $3: find args files should satisfy
+
+	local DIR="$1"
+	local MAXDEPTH="$2"
+	local FINDARGS="$3"
+	eval "find \"$DIR\" $MAXDEPTH \( $FINDARGS \) -print"
 }
 
 # ----------------------------------------------------
@@ -114,42 +190,44 @@ while [ "$1" ]; do
 	shift
 done
 
-DELETE="-exec rm -ri {} \;"
-if [ "$FORCE" == "y" ]; then
-	DELETE="-exec rm -r {} \;"
-elif [ "$SIMULATE" == "y" ]; then
-	DELETE="-print"
-fi
-
 MAXDEPTH="-maxdepth 1"
 if [ "$RECURSIVE" == "y" ]; then
 	MAXDEPTH=
 fi
+FINDARGS=$(build_findargs "$CLASSES" "$EXCLUDE")
 
-FINDARGS=
-OIFS="$IFS"
-IFS=":
-"
+if [ "$FORCE" == "y" ]; then
+	# just delete and exit
+	delete_files "$DIR" "$MAXDEPTH" "$FINDARGS"
+	exit $?
+fi
 
-for class in $CLASSES; do
-	IFS="$OIFS"
-	# deal (somewhat improperly) with excludes -> what happens if . $ or so in class names
-	echo "$EXCLUDE" | grep -q ":$class:" && continue
+# Print what would be deleted
+FILES=$(print_files_to_delete "$DIR" "$MAXDEPTH" "$FINDARGS")
+RES=$?
 
-	EXTRA="$(class_$class | awk '
-		BEGIN { FS=":" }
+# no files found
+[ -z "$FILES" ] && exit 0
 
-		{ 
-			for(i=1; i <= NF; ++i) {	
-				if (i > 1) printf "-o "
-				printf "-name \"" $i "\" "
-			}
-		}
-	')"
-	[ "$FINDARGS" ] && FINDARGS="$FINDARGS -o "
-	FINDARGS="$FINDARGS$EXTRA"
-done
-IFS="$OIFS"
+# print the findings:
+echo "$FILES"
 
-eval "find \"$DIR\" $MAXDEPTH \( $FINDARGS \) $DELETE"
+if [ "$SIMULATE" == "y" ]; then
+	# if only simulate we are done
+	exit $RES
+fi
+
+echo 
+read -p "Delete these temporary files? ([y]es all / [n]one / [a]sk)  " RES
+
+if [ "$RES" == "y" ]; then
+	delete_files "$DIR" "$MAXDEPTH" "$FINDARGS"
+	exit $?
+fi
+
+if [ "$RES" == "a" ]; then
+	delete_files_ask "$DIR" "$MAXDEPTH" "$FINDARGS"
+	exit $?
+fi
+
 exit 0
