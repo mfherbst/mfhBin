@@ -46,19 +46,21 @@ usage() {
 	it defaults to the current working directory.
 
 	Options:
-	--force, -f, -y, --yes, --quiet, -q
+	--force, -f
 	Remove files without asking
 
 	--recursive, -r
 	Recursively act on all subdirectories as well
 
-	--dry-run, -n, --simulate, -s, --list, -l
+	--list, -l
 	Just print what would be deleted and do not delete
 	anything
 
+	-o <class1>:<class2>: ...
 	--only <class1>:<class2>: ...
 	Only delete files from these classes
 
+	-e <class1>:<class2>: ...
 	--exclude <class1>:<class2>: ...
 	Do not delete files from these classes
 
@@ -162,20 +164,20 @@ while [ "$1" ]; do
 			usage
 			exit 0
 			;;
-		--force|-f|-y|--yes|--quiet|-q)
+		--force|-f)
 			FORCE=y
 			;;
 		--recursive|-r)
 			RECURSIVE=y
 			;;
-		--dry-run|-n|--simulate|-s|--list|-l)
+		--list|-l)
 			SIMULATE=y
 			;;
-		--only)
+		--only|-o)
 			shift
 			CLASSES="$1"
 			;;
-		--exclude)
+		--exclude|-e)
 			shift
 			EXCLUDE=":$1:"
 			;;
