@@ -1,2 +1,6 @@
 #!/bin/sh
+# add this dir to path:
+PATH="$PATH:$(dirname "$0")"
+
+# execute in blocking terminal.
 in_blocking_terminal.sh ${EDITOR:-vim} $*
