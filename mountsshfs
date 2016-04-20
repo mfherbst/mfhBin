@@ -101,9 +101,14 @@ class config:
 
         locdir = mount_dict.get("local_dir")
         if locdir is None or locdir == "":
-            mount_dict["local_dir"] = os.path.expanduser(self.defaults["local_basedir"] + "/" + name)
-        else:
+            mount_dict["local_dir"] = self.defaults["local_basedir"] + "/" + name
+
+        # Canonicalise the local_dir path:
+        try:
             mount_dict["local_dir"] = os.path.expanduser(mount_dict["local_dir"])
+            mount_dict["local_dir"] = os.path.realpath(mount_dict["local_dir"])
+        except OSError as e:
+            pass
 
     def __check_mount(self,mount_dict):
         """
