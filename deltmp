@@ -7,7 +7,7 @@ class_nohup() {
 }
 
 class_swp() {
-	echo ".*.swp"
+	echo ".*.swp:.*.swo"
 }
 
 class_win() {
@@ -23,7 +23,7 @@ class_tilde() {
 }
 
 class_comp() {
-	echo "a.out:*.o"
+	echo "a.out:*.o:*.pyc"
 }
 
 # ------------------------------------------------------
