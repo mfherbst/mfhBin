@@ -2,7 +2,7 @@ _deltmp() {
 	local cur prefix comp_classes I lastarg
 	# the current word to be completed:
 	cur=${COMP_WORDS[COMP_CWORD]}
-	
+
 	# The current completion reply
 	COMPREPLY=()
 
@@ -13,7 +13,12 @@ _deltmp() {
 	if [ "$COMP_CWORD" -gt "1" ]; then
 		for ((I=COMP_CWORD-1;I>=0;--I)); do
 			lastarg="${COMP_WORDS[$I]}"
-			if [[ "$lastarg" == "--exclude" || "$lastarg" == "--only" || "$lastarg" == "-o" || "$lastarg" == "-e" ]]; then
+			if [[ "$lastarg" == "--exclude" \
+				|| "$lastarg" == "--only" \
+				|| "$lastarg" == "--include" \
+				|| "$lastarg" == "-o" \
+				|| "$lastarg" == "-e" \
+				|| "$lastarg" == "-i" ]]; then
 				compclasses="y"
 				break
 			fi
@@ -25,8 +30,8 @@ _deltmp() {
 
 		COMPREPLY=( $( compgen -W 'comp mac nohup swp tilde win' -- "$cur" ) )
 		return 0
-	else 
-		COMPREPLY=( $( compgen -o plusdirs -W '-h --help -r --recursive --force -f --only -o --exclude -e --list -l' -- "$cur" ) )
+	else
+		COMPREPLY=( $( compgen -o plusdirs -W '-h --help -r --recursive --force -f --only -o --exclude -e --include -i --list -l' -- "$cur" ) )
 		return 0
 	fi
 	return 0

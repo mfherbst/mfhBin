@@ -60,9 +60,16 @@ usage() {
 	--only <class1>:<class2>: ...
 	Only delete files from these classes
 
+	-i <class1>:<class2>: ...
+	--include <class1>:<class2>: ...
+	Apart from the default classes (see below), also include
+	those to the default selection.
+
 	-e <class1>:<class2>: ...
 	--exclude <class1>:<class2>: ...
-	Do not delete files from these classes
+	Do not delete files from these classes. Takes preference
+	over -i/--include (i.e. if both specify the same class,
+	then -e/--exclude wins.
 
 	Per default the following classes are considered:
 	$CLASSES
@@ -95,8 +102,8 @@ build_findargs() {
 		local EXTRA="$(class_$class | awk '
 		BEGIN { FS=":" }
 
-		{ 
-			for(i=1; i <= NF; ++i) {	
+		{
+			for(i=1; i <= NF; ++i) {
 				if (i > 1) printf "-o "
 				printf "-name \"" $i "\" "
 			}
@@ -154,7 +161,7 @@ print_files_to_delete() {
 SIMULATE=n
 RECURSIVE=n
 FORCE=n
-CLASSES="$(list_of_classes | tr ' ' ':')" 		# default classes which are activated
+CLASSES="swp:win:mac:tilde"
 EXCLUDE=""
 DIR="."
 
@@ -180,6 +187,10 @@ while [ "$1" ]; do
 		--exclude|-e)
 			shift
 			EXCLUDE=":$1:"
+			;;
+		--include|i)
+			shift
+			CLASSES="$CLASSES:$1"
 			;;
 		*)
 			if [ ! -d "$1" ]; then
@@ -219,7 +230,7 @@ if [ "$SIMULATE" == "y" ]; then
 	exit $RES
 fi
 
-echo 
+echo
 read -p "Delete these temporary files? ([y]es all / [n]one / [a]sk)  " RES
 
 if [ "$RES" == "y" ]; then
