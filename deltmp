@@ -19,7 +19,7 @@ class_mac() {
 }
 
 class_backup() {
-	echo ".*~:*~"
+	echo ".*~:*~:*.bak"
 }
 
 class_comp() {
