@@ -18,7 +18,7 @@ class_mac() {
 	echo "__MACOSX:.Trashes:.Spotlight*:._*:.DS_Store"
 }
 
-class_tilde() {
+class_backup() {
 	echo ".*~:*~"
 }
 
@@ -161,7 +161,7 @@ print_files_to_delete() {
 SIMULATE=n
 RECURSIVE=n
 FORCE=n
-CLASSES="swp:win:mac:tilde"
+CLASSES="swp:win:mac:backup"
 EXCLUDE=""
 DIR="."
 
