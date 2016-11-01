@@ -1,0 +1,74 @@
+#!/bin/bash
+
+ISO="$1"
+DEVICE="${2:-/dev/sr0}"
+HASH="md5sum" # The hash program to use
+
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+	cat <<- EOF
+	$(basename $0) <isopath> [ <device> ]
+
+	Script to read a iso CD and store it on disk using dd.
+
+	The script actually reads the CD twice and compares
+	the $HASH of the two reads. If they match we can
+	be fairly certain that we got the correct data.
+
+	If the second argument (device) is not provided,
+	/dev/sr0 is used automatically.
+	EOF
+	exit 0
+fi
+
+if [ -z "$ISO" -o ! -b "$DEVICE" ]; then
+	echo "\$1 should be an isoname and \$2 a device." >&2
+	exit 1
+fi
+
+# add iso extension
+ISO="$(basename "$ISO" ".iso").iso"
+
+if [ -f "$ISO" ]; then
+	echo "Iso $ISO already exists" >&2
+	exit 1
+fi
+
+# The size of a block
+BLOCKSIZE=$(isoinfo -d -i "$DEVICE" | awk '/Logical block size is:/ {print $5}')
+if [ -z "$BLOCKSIZE" ]; then
+	echo "Blank blocksize" >&2
+	exit 1
+fi
+
+# The number of blocks
+BLOCKCOUNT=$(isoinfo -d -i "$DEVICE" | awk '/Volume size is:/ {print $4}')
+if test "$BLOCKCOUNT" = ""; then
+	echo "Blank blockcount" >&2
+	exit 1
+fi
+
+# The total number of bytes
+TOTALSIZE=$(( BLOCKSIZE * BLOCKCOUNT))
+
+DD="dd if=$DEVICE bs=$BLOCKSIZE count=$BLOCKCOUNT conv=notrunc,noerror status=none"
+PV="pv -s $TOTALSIZE"
+
+echo "#"
+echo "# Reading device and storing to iso"
+echo "#"
+$DD | $PV > "$ISO"
+
+echo
+echo "#"
+echo "# 2nd read to get $HASH"
+echo "#"
+$DD | $PV | $HASH | sed "s/-\$/$ISO/" > "$ISO.$HASH"
+
+echo
+if $HASH -c "$ISO.$HASH"; then
+	eject "$DEVICE"
+	exit 0
+else
+	echo "MD5sum is different"
+	exit 1
+fi

@@ -7,6 +7,9 @@ Helpful scripts for everyday work
 * Source the file ``enable.bash_completion`` from the ``~/.bash_completion`` in order to enable tab completion for the scripts in this repository.
 
 ## Short description of contained scripts
+### cd2iso
+Copy an iso9660 CD to an iso file on disk verifying the process with a checksum.
+
 ### deltmp
 Find and delete temporary files. Commandline arguments allow to specify precisely what types of files are deleted (Windows, Mac, Programming, swp, ...) and wheather to ask before deleting anything or not.
 
