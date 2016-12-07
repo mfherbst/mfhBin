@@ -1,0 +1,31 @@
+#!/bin/sh
+
+usage() {
+	cat <<- EOF
+	wetter [ -h | --help | --no-proxy ] <Town>
+
+	Get weather from wttr.in for <Town>
+	EOF
+}
+
+LOC=""
+NOPROXY=""
+while [ "$1" ]; do
+	case "$1" in
+		--help|-h)
+			usage
+			;;
+		--no-proxy)
+			NOPROXY="--no-proxy"
+			;;
+		-*)
+			echo "Unknown arg: $1" >&2
+			exit 1
+			;;
+		*) 
+			break
+			;;
+	esac
+	shift
+done
+wget $NOPROXY -q  -O - wttr.in/$1?m
