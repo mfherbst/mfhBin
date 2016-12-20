@@ -1,5 +1,20 @@
 #!/bin/bash
 
+detect_gpg_agent() {
+	# Tries to find a running gpg-agent instance
+	# if found it returns 0 and sets the variables
+	# GPG_AGENT_INFO, else it returns 1
+
+	for BASE in /run/user/$UID; do
+		if [ -S "$BASE/gnupg/S.gpg-agent" ]; then
+			GPG_AGENT_INFO="$BASE/gnupg/S.gpg-agent:0:1"
+			echo "Found gpg-agent in socket $GPG_AGENT_INFO"
+			return 0
+		fi
+	done
+	return 1
+}
+
 detect_ssh_agent() {
 	# Tries to find a running ssh-agent instance
 	# if that turns out to work, it returns 0 and
@@ -40,6 +55,7 @@ echo_finding() {
 echo_findings() {
 	echo_finding "SSH_AGENT_PID"
 	echo_finding "SSH_AUTH_SOCK"
+	echo_finding "GPG_AGENT_INFO"
 }
 
 export_finding() {
@@ -51,6 +67,7 @@ export_finding() {
 export_findings() {
 	export_finding "SSH_AGENT_PID"
 	export_finding "SSH_AUTH_SOCK"
+	export_finding "GPG_AGENT_INFO"
 }
 
 usage() {
@@ -79,6 +96,7 @@ FOUND_SOMETHING=n
 
 # Search for agents
 detect_ssh_agent && FOUND_SOMETHING=y
+detect_gpg_agent && FOUND_SOMETHING=y
 
 # Export what we found:
 export_findings
