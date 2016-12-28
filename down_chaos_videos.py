@@ -50,6 +50,18 @@ class config:
                 "fahrplan": "https://events.ccc.de/camp/2015/Fahrplan",
                 "media_prefix": "https://cdn.media.ccc.de/events/camp2015",
             },
+            "mrmcd2016": {
+                "starts": "2016-09-02",
+                "name": "mrmcd2016",
+                "fahrplan": "https://2016.mrmcd.net/fahrplan",
+                "media_prefix": "http://cdn.media.ccc.de/events/mrmcd/mrmcd16",
+            },
+            "33c3": {
+                "starts": "2016-12-27",
+                "name": "33c3",
+                "fahrplan": "https://fahrplan.events.ccc.de/congress/2016/Fahrplan",
+                "media_prefix": "https://cdn.media.ccc.de/congress/2016"
+            },
         },
     }
 
@@ -177,7 +189,7 @@ def get_format_list(media_prefix):
     if (not req.ok):
         raise IOError(errorstring + ".")
 
-    soup = BeautifulSoup(req.content)
+    soup = BeautifulSoup(req.content,"lxml")
     for link in soup.find_all('a'):
         hreftext = link.get('href')
         if (hreftext.rfind("/") > 0) and link.string != "Parent Directory":
@@ -202,7 +214,7 @@ class media_url_builder:
         if (not req.ok):
             raise IOError(errorstring + ".")
 
-        soup = BeautifulSoup(req.content)
+        soup = BeautifulSoup(req.content,"lxml")
         for link in soup.find_all('a'):
             hreftext = link.get('href')
             if (hreftext.rfind(".") > 0):
