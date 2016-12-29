@@ -18,7 +18,7 @@ Detect running ``ssh-agent`` instances and determine the appropriate environment
 Helpful if you want to connect to your agent from inside a ``screen`` session.
 Just source the script from inside your ``screen`` session and be happy that you don't have to type your password.
 
-### down_chaos_videos.py
+### down_frab_videos.py
 Download videos or other media from CCC events (like the Chaos communication congress, MRMCD, Camp, ...)
 By default the most recent chaos event is considered and high-quality ``webm`` files are downloaded.
 This can, however, be changed using the flags ``--event`` and ``--format`` respectively. 
