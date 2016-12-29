@@ -19,26 +19,7 @@ Helpful if you want to connect to your agent from inside a ``screen`` session.
 Just source the script from inside your ``screen`` session and be happy that you don't have to type your password.
 
 ### down_frab_videos.py
-Download videos or other media from CCC events (like the Chaos communication congress, MRMCD, Camp, ...)
-By default the most recent chaos event is considered and high-quality ``webm`` files are downloaded.
-This can, however, be changed using the flags ``--event`` and ``--format`` respectively. 
-A list of configured events and available formats for a given event can be printed as well.
-
-When downloading a talk the script will not only download the recording, but also some information from the Fahrplan as well.
-This includes the attached files, the abstract and summary for the talk and the list of links and references.
-
-In order to download talks, you just need to provide the script with a list of 4-digit talk ids. 
-These should be listed line-by-line in a file, handed over to the script via ``--listfile``.
-For example the file 
-```
-6258
-# some crazy comment
-6450
-```
-downloads the talks ``6258`` and ``6450``. 
-
-The script can be configured for downloading other talks or media formats via a configuration file. 
-If you want to personalise it, you should probably start by dumping the default configuration somewhere (use ``--config`` and ``--dump`` for this)
+Now managed in [github.com/mfherbst/down-frab-videos](https://github.com/mfherbst/down-frab-videos).
 
 ### in_blocking_terminal.sh
 Script to hack away the non-blocking feature of some terminals. 
