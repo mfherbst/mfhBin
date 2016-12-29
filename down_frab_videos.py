@@ -411,8 +411,9 @@ class lecture_downloader:
                 continue
             
             # download
-            outfile = url[url.rfind("/")+1:] # basename of the url
-            outfile = outfile[:outfile.rfind("?")] # ignore the tailling ?..... stuff
+            outfile = url[url.rfind("/")+1:]          # basename of the url
+            outfile = outfile[:outfile.rfind("?")]    # ignore the tailling ?..... stuff
+            outfile = outfile.strip('"')              # strip the "
             ret = wget(url, folder=folder, out=outfile)
             if ret != 0:
                 print("Could not download attachment \"" + att + "\" to file \"" + outfile 
