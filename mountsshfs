@@ -470,7 +470,7 @@ def print_mounts(mounts):
     print(formstr.format(**fields))
 
     # print the fields:
-    for name in mounts:
+    for name in sorted(mounts):
         print_dict = dict(mounts[name])
         print_dict["name"] = name
         print_dict["mounted"] = " "
