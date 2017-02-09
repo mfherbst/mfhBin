@@ -161,7 +161,7 @@ print_files_to_delete() {
 SIMULATE=n
 RECURSIVE=n
 FORCE=n
-CLASSES="swp:win:mac:backup"
+CLASSES="win:mac:backup"
 EXCLUDE=""
 DIR="."
 
