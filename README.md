@@ -56,6 +56,9 @@ Produces a random mac address
 ### termvim
 Open the arguments in ``vim`` in a new, blocking terminal.
 
+### this_path_on
+Open the current working directory on a remote machine via ssh
+
 ### vimwhich
 Script to open the executable/script corresponding to a command in an editor (by default ``vim``). 
 I.e. it looks up the full path of the command using ``which`` and then opens the result. 
