@@ -1,24 +1,53 @@
 #!/bin/bash
 
-ISO="$1"
-DEVICE="${2:-/dev/sr0}"
-HASH="md5sum" # The hash program to use
-
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+usage() {
 	cat <<- EOF
-	$(basename $0) <isopath> [ <device> ]
+	$(basename $0) [ --<hash> ] <isopath> [ <device> ]
 
 	Script to read a iso CD and store it on disk using dd.
 
 	The script actually reads the CD twice and compares
-	the $HASH of the two reads. If they match we can
+	the hashsum of the two reads. If they match we can
 	be fairly certain that we got the correct data.
 
 	If the second argument (device) is not provided,
 	/dev/sr0 is used automatically.
+
+	The available hashs are
+	    --md5       invokes md5sum     (default)
+	    --sha1      invokes sha1sum
+	    --sha256    invokes sha256sum
+	    --sha512    invokes sha512sum
 	EOF
 	exit 0
-fi
+}
+
+HASH="md5sum" # The hash program to use
+
+case "$1" in
+	"--md5") HASH="md5sum"
+		shift
+		;;
+	"--sha1") HASH="sha1sum"
+		shift
+		;;
+	"--sha256") HASH="sha256sum"
+		shift
+		;;
+	"--sha512") HASH="sha512sum"
+		shift
+		;;
+	"--help"|"-h")
+		usage
+		exit 0
+		;;
+	"--"*)
+		echo "Unkown hash: $1" >&2
+		exit 1
+esac
+
+ISO="$1"
+DEVICE="${2:-/dev/sr0}"
 
 if [ -z "$ISO" -o ! -b "$DEVICE" ]; then
 	echo "\$1 should be an isoname and \$2 a device." >&2
@@ -32,6 +61,11 @@ if [ -f "$ISO" ]; then
 	echo "Iso $ISO already exists" >&2
 	exit 1
 fi
+
+echo "Device:         $DEVICE"
+echo "Output file:    $ISO"
+echo "Hash program:   $HASH"
+echo
 
 # The size of a block
 BLOCKSIZE=$(isoinfo -d -i "$DEVICE" | awk '/Logical block size is:/ {print $5}')
@@ -69,6 +103,6 @@ if $HASH -c "$ISO.$HASH"; then
 	eject "$DEVICE"
 	exit 0
 else
-	echo "MD5sum is different"
+	echo "$HASH is different" >&2
 	exit 1
 fi
