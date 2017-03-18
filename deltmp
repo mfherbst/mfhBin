@@ -26,6 +26,10 @@ class_comp() {
 	echo "a.out:*.o:*.pyc"
 }
 
+class_orca() {
+	echo "*.gbw:*.prop"
+}
+
 # ------------------------------------------------------
 
 fill_list_class_cache() {
@@ -188,7 +192,7 @@ while [ "$1" ]; do
 			shift
 			EXCLUDE=":$1:"
 			;;
-		--include|i)
+		--include|-i)
 			shift
 			CLASSES="$CLASSES:$1"
 			;;
