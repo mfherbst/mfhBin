@@ -2,13 +2,13 @@
 
 usage() {
 	cat <<- EOF
-	wetter [ -h | --help | --no-proxy ] <Town>
+	wetter [ -h | --help | --no-proxy --lang <it|de|..> ] <Town>
 
 	Get weather from wttr.in for <Town>
 	EOF
 }
 
-LOC=""
+LNG=`echo "$LANG" | grep -o "^.."`
 NOPROXY=""
 while [ "$1" ]; do
 	case "$1" in
@@ -18,14 +18,21 @@ while [ "$1" ]; do
 		--no-proxy)
 			NOPROXY="--no-proxy"
 			;;
+		--lang)
+			shift
+			LNG="$1"
+			;;
 		-*)
 			echo "Unknown arg: $1" >&2
 			exit 1
 			;;
-		*) 
+		*)
 			break
 			;;
 	esac
 	shift
 done
-wget $NOPROXY -q  -O - wttr.in/$1?m
+
+EXTRA="m"
+[ "$LNG" != "" ] && EXTRA="lang=$LNG"
+wget $NOPROXY -q  -O - wttr.in/$1?${EXTRA}
