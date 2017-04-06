@@ -2,9 +2,9 @@
 
 usage() {
 	cat <<- EOF
-	wetter [ -h | --help | --no-proxy --lang <it|de|..> ] <Town>
+	wetter [ -h | --help | --no-proxy --lang <it|de|..> ] <Town>|~<Place>
 
-	Get weather from wttr.in for <Town>
+	Get weather from wttr.in for <Town> or <Place>
 	EOF
 }
 
@@ -35,4 +35,6 @@ done
 
 EXTRA="m"
 [ "$LNG" != "" ] && EXTRA="lang=$LNG&"
-wget $NOPROXY -q  -O - wttr.in/$1?${EXTRA}m
+
+CANONICAL=`echo "$1" | sed 's/ /+/g'`
+wget $NOPROXY -q  -O - wttr.in/${CANONICAL}?${EXTRA}m
