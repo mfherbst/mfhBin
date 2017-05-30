@@ -725,6 +725,7 @@ def get_config(config_path):
         # we need to drop a default
         if config_path == default_config_path:
             print("Dropping default config at: " + default_config_path)
+            os.makedirs(os.path.dirname(default_config_path),exist_ok=True)
             with open(default_config_path,"w") as f:
                 f.writelines(config.default_config())
             print("Please edit to suit your needs.")
