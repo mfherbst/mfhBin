@@ -781,5 +781,7 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
         name, mount_dict = mounts.popitem()
-        ret = toggle_mount(name,mount_dict)
+        ret = toggle_mount(name,mount_dict,
+                           force_mount=argdict["force_mount"],
+                           force_unmount=argdict["force_unmount"])
         sys.exit(ret)
