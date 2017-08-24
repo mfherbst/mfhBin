@@ -119,12 +119,21 @@ def get_args():
     return args
 
 
+def hash_password(pw, algo):
+    # encrypt is deprecated in the newer versions
+    # of passlib, so we fall back to it only if needed.
+    if hasattr(algo, "hash"):
+        return algo.hash(pw)
+    else:
+        return algo.encrypt(pw)
+
+
 def main():
     # That simple for now:
 
     args = get_args()
     pw = password_interactive()
-    print(args.username + ":" + args.algo.hash(pw))
+    print(args.username + ":" + hash_password(pw, args.algo))
 
 
 if __name__ == "__main__":
