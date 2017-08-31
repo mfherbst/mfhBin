@@ -22,8 +22,8 @@ class_backup() {
 	echo ".*~:*~:*.bak"
 }
 
-class_comp() {
-	echo "a.out:*.o:*.pyc"
+class_cobj() {
+	echo "a.out:*.o"
 }
 
 class_orca() {
