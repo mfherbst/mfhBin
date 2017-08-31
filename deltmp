@@ -30,6 +30,10 @@ class_orca() {
 	echo "*.gbw:*.prop"
 }
 
+class_pyobj() {
+	echo "__pycache__:*.pyc"
+}
+
 # ------------------------------------------------------
 
 fill_list_class_cache() {
