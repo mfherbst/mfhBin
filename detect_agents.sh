@@ -34,7 +34,7 @@ detect_ssh_agent() {
 		for pid in $PIDS; do
 			# find parent pid:
 			ppid=$(ps --pid $pid o ppid,pid | awk "/$pid\$/ { print \$1 }")
-			
+
 			if [ -S "$folder/agent.$ppid" ]; then
 				echo "Found ssh-agent running on $pid"
 				SSH_AGENT_PID=$pid
@@ -74,7 +74,7 @@ usage() {
 	cat <<- EOF
 	./detect_agents.sh [ -h ]
 
-	Try to detect a running ssh-agent instance and set bash 
+	Try to detect a running ssh-agent instance and set bash
 	environment variables such that ssh instances can make
 	use of it.
 
