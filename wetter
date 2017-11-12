@@ -36,5 +36,5 @@ done
 EXTRA="m"
 [ "$LNG" != "" ] && EXTRA="lang=$LNG&"
 
-CANONICAL=`echo "$1" | sed 's/ /+/g'`
+CANONICAL=`echo "$1" | sed 's/~/+/g'`
 wget $NOPROXY -q  -O - wttr.in/${CANONICAL}?${EXTRA}m
