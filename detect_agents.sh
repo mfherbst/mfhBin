@@ -41,6 +41,13 @@ detect_ssh_agent() {
 				SSH_AUTH_SOCK="$folder/agent.$ppid"
 				return 0
 			fi
+
+			if [ -S "$folder/agent.$((pid-1))" ]; then
+				echo "Found ssh-agent running on $pid"
+				SSH_AGENT_PID=$pid
+				SSH_AUTH_SOCK="$folder/agent.$((pid-1))"
+				return 0
+			fi
 		done
 	done
 	return 1
