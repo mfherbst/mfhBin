@@ -8,7 +8,7 @@ usage() {
 	EOF
 }
 
-LNG=`echo "$LANG" | grep -o "^.."`
+LNG="${LANG%_*}"
 NOPROXY=""
 while [ "$1" ]; do
 	case "$1" in
@@ -34,8 +34,12 @@ while [ "$1" ]; do
 	shift
 done
 
-[ "$LNG" != "" ] && EXTRA="lang=$LNG&"
-EXTRA="${EXTRA}m"
+EXTRA="m"
+[ "$LNG" != "" ] && EXTRA="${EXTRA}&lang=$LNG"
 
-CANONICAL=`echo "$@" | sed 's/~/+/g'`
+# Number of columns <125 => choos narrow layout
+COLUMNS=`tput cols`
+[ "$COLUMNS" -lt 125 ] && EXTRA="${EXTRA}&n"
+
+CANONICAL=`echo "$@" | sed 's/ /+/g'`
 wget $NOPROXY -q  -O - "wttr.in/${CANONICAL}?${EXTRA}"
