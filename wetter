@@ -42,4 +42,4 @@ COLUMNS=`tput cols`
 [ "$COLUMNS" -lt 125 ] && EXTRA="${EXTRA}&n"
 
 CANONICAL=`echo "$@" | sed 's/ /+/g'`
-wget $NOPROXY -q  -O - "wttr.in/${CANONICAL}?${EXTRA}"
+wget $NOPROXY -q  -O - "https://wttr.in/${CANONICAL}?${EXTRA}"
