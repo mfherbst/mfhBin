@@ -34,6 +34,10 @@ class_pyobj() {
 	echo "__pycache__:*.pyc"
 }
 
+class_tex() {
+	echo "*.out:*.aux:*.log:*.bbl:*.blg"
+}
+
 # ------------------------------------------------------
 
 fill_list_class_cache() {
