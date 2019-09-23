@@ -170,7 +170,7 @@ class config:
         self.__required_fields_for_mount = [ key for key, value in config.__mount_section_dict.items() if value[0] ]
 
         # parse the config
-        parsed = yaml.load(file)
+        parsed = yaml.safe_load(file)
 
         try:
             self.__parse_defaults_section(parsed["defaults"])
