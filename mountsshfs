@@ -435,7 +435,7 @@ def print_mounts(mounts):
                  "name" : 38,
                  "user_host": 0,
                  "remote_dir": 0,
-                 "description": width - 42}
+                 "description": width - 43}
     elif width < 140:
         sizes = {"mounted" : 1,
                  "name" : 38,

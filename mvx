@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ ! -f "$1" ] || [ ! -f "$2" ];then
+if [ ! -e "$1" ] || [ ! -e "$2" ];then
 	echo "$(basename $0) <File1> <File2>"
 	echo ""
 	echo "Swaps the contents of the two files"

@@ -19,6 +19,7 @@ class config:
         "reading": "",
         "chat": "",
         "paper": "",
+        "calculation": "",
     }
 
     # What separates the number from the symbols
@@ -156,9 +157,17 @@ def main():
                        help="Automatically determine tags for workspace")
     group.add_argument("--set-tags", metavar='tag', nargs='+', type=str,
                        help='Set a single tag to a workspace')
+    group.add_argument("--list-tags", action="store_true",
+                       default=False, help="List workspace tags and exit")
 
     # Parse args
     args = parser.parse_args()
+
+    if args.list_tags:
+        print("The following tags are known")
+        for tag, symbol in config.tag_to_symbol.items():
+            print("    {:15s} ( {:2s} )".format(tag, symbol))
+        return
 
     # Determine info of workspace act upon
     if (args.num):
